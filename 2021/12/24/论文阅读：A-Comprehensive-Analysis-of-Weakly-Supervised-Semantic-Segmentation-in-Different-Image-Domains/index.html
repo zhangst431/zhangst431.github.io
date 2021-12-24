@@ -104,12 +104,12 @@ Yume Shoka = Hexo</title>
       </div>
       <div id="imgs" class="pjax">
         <ul>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gicitf0kl1j20zk0m87fe.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1giciusoyjnj219g0u0x56.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipeu7txpzj20zk0m81kx.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1giclffsa1cj20zk0m811l.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipevo9j1jj20zk0m8e81.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gicis081o9j20zk0m8dmr.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipesrnqv3j20zk0m8ava.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gicljgocqbj20zk0m8e81.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipewkhf1zj20zk0m81kx.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gicitzannuj20zk0m8b29.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1giph4fomxoj20zk0m8axp.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipew8gmvyj20zk0m87wh.jpg"></li>
         </ul>
       </div>
     </header>
@@ -186,7 +186,17 @@ Yume Shoka = Hexo</title>
 <h2 id="weakly-supervised-semantic-segmentation"><a class="markdownIt-Anchor" href="#weakly-supervised-semantic-segmentation">#</a> Weakly-Supervised Semantic Segmentation</h2>
 <p>已经提出的弱监督语义分割方法主要可以分为以下四类：Expectation-Maximization, Multiple Instance Learning, Object Proposal Class Inference, and Self-Supervised Learning.<br>
  表 2 根绝各个方法的共同特症列出了各个方法：<br>
-<img data-src="./table2.png" alt="table 2"></p>
+<img data-src=".%5Ctable2.png" alt="table 2"><br>
+ 表 3 根据时间顺序列出了各个方法以及其代码可用性和在 PASCAL VOC2012 上的性能：<br>
+<img data-src=".%5Ctable3.png" alt="table3"></p>
+<h3 id="expection-maximization"><a class="markdownIt-Anchor" href="#expection-maximization">#</a> Expection-Maximization</h3>
+<p>这类方法我暂时还没有看懂，等我看懂了再补。</p>
+<h3 id="multiple-instance-learning"><a class="markdownIt-Anchor" href="#multiple-instance-learning">#</a> Multiple Instance Learning</h3>
+<p>通常的 Multi-class classification 一般指给定一个样本和其所属的类别作为标签训练一个分类模型模型，而以二分类为例解释 Multi Instance Learning 的做法则是：给定一堆样本，只要其中有一个阳性样本则这堆样本的标签就是阳性，如果所有的样本均为阴性样本则该堆样本的标签才是阴性，以此作为输入设计算法。</p>
+<ul>
+<li>MIL-FCN (2014): 该方法训练一个以<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>×</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">1 \times 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> 卷积层和全局最大值池化层为 head 的模型，以图像级标签作为监督信号。在推理阶段则是预测每个位置处最可能的类别，然后将预测图上采样到原图大小。</li>
+<li>DCSM (2016): 用图像级标签训练一个 CNN 然后利用 GBP (guided back-propagation) 在中上层（我也不清楚中上层指的是深层还是浅层的卷积层）的卷积层中获得类激活图，然后用这些图进行作差和平均的操作获得不同层和尺度的激活图，最后用 CRF 进行后处理。</li>
+</ul>
 <p>renal：肾</p>
 
       <div class="tags">
@@ -202,7 +212,7 @@ Yume Shoka = Hexo</title>
       <i class="ic i-calendar-check"></i>
     </span>
     <span class="text">Edited on</span>
-    <time title="Modified: 2021-12-24 18:06:33" itemprop="dateModified" datetime="2021-12-24T18:06:33+08:00">2021-12-24</time>
+    <time title="Modified: 2021-12-24 22:26:55" itemprop="dateModified" datetime="2021-12-24T22:26:55+08:00">2021-12-24</time>
   </span>
 </div>
 
@@ -258,7 +268,7 @@ Yume Shoka = Hexo</title>
     <div class="item left">
       
 
-  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva4.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1giclxfdlttj20zk0m8npd.jpg" title="Hello World">
+  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva1.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1gipex2cdtbj20zk0m8x6p.jpg" title="Hello World">
   <span class="type">Previous Post</span>
   <span class="category"><i class="ic i-flag"></i> </span>
   <h3>Hello World</h3>
@@ -282,7 +292,7 @@ Yume Shoka = Hexo</title>
   <div class="panels">
     <div class="inner">
       <div class="contents panel pjax" data-title="Contents">
-          <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#abstract"><span class="toc-number">1.</span> <span class="toc-text"> Abstract</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#introduction"><span class="toc-number">2.</span> <span class="toc-text"> Introduction</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#related-work"><span class="toc-number">3.</span> <span class="toc-text"> Related Work</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#weakly-supervised-semantic-segmentation"><span class="toc-number">3.1.</span> <span class="toc-text"> Weakly-Supervised Semantic Segmentation</span></a></li></ol></li></ol>
+          <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#abstract"><span class="toc-number">1.</span> <span class="toc-text"> Abstract</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#introduction"><span class="toc-number">2.</span> <span class="toc-text"> Introduction</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#related-work"><span class="toc-number">3.</span> <span class="toc-text"> Related Work</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#weakly-supervised-semantic-segmentation"><span class="toc-number">3.1.</span> <span class="toc-text"> Weakly-Supervised Semantic Segmentation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#expection-maximization"><span class="toc-number">3.1.1.</span> <span class="toc-text"> Expection-Maximization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multiple-instance-learning"><span class="toc-number">3.1.2.</span> <span class="toc-text"> Multiple Instance Learning</span></a></li></ol></li></ol></li></ol>
       </div>
       <div class="related panel pjax" data-title="Related">
       </div>
