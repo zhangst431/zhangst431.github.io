@@ -104,12 +104,12 @@ Yume Shoka = Hexo</title>
       </div>
       <div id="imgs" class="pjax">
         <ul>
-          <li class="item" data-background-image="https://tva2.sinaimg.cn/large/6833939bly1gicli9lfebj20zk0m84qp.jpg"></li>
-          <li class="item" data-background-image="https://tva2.sinaimg.cn/large/6833939bly1giclxfdlttj20zk0m8npd.jpg"></li>
-          <li class="item" data-background-image="https://tva2.sinaimg.cn/large/6833939bly1gipesrnqv3j20zk0m8ava.jpg"></li>
-          <li class="item" data-background-image="https://tva2.sinaimg.cn/large/6833939bly1giclfw2t96j20zk0m8x6p.jpg"></li>
-          <li class="item" data-background-image="https://tva2.sinaimg.cn/large/6833939bly1giciundwu5j20zk0m8n9e.jpg"></li>
-          <li class="item" data-background-image="https://tva2.sinaimg.cn/large/6833939bly1gipex2cdtbj20zk0m8x6p.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipewr8iypj20zk0m8b29.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gicm07ih54j20zk0m84qp.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipeun65urj20zk0m81ii.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1giclfdu6exj20zk0m87hw.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gicis3attqj20zk0m8k7l.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipeuv80yoj20zk0m8kjl.jpg"></li>
         </ul>
       </div>
     </header>
@@ -207,16 +207,20 @@ Yume Shoka = Hexo</title>
 <p>这种方法与 Multi Instance Learning 的方法类似，即使用推理生成的像素级激活图作为伪标签进行自监督学习。在实际操作中，我们通常的做法是先训练一个”backbone“分类网络以生成 CAM seeds 然后使用 CAM seeds 训练 FCN 用于最终的分割任务。</p>
 <ul>
 <li>SEC (2016): 这是这类方法的一个典型代表，它训练一个 CNN 并将生成的 CAM 作为训练 FCN 的伪标签，训练 FCN 时的监督信号有图像级的标签，CRF 处理过的 CAM 伪标签。</li>
-<li>MDC (2018): 其在训练 CNN 的时候使用了 multi-dilated convolutional (空洞卷积)，并将空洞卷积用于生成 CAM 的过程然后生成伪标签并和 class score-weighted maps 训练 FCN 网络。<br>
-然而，以上两种方法存在的问题是：最终得到的分割结果只能很好的分出最值得注意的区域。其中一种方法是使用对抗或随机擦除（adversarial or stochastic erasing）的方法，从而使模型可以关注到最值得注意的区域以外的区域：</li>
+<li>MDC (2018): 其在训练 CNN 的时候使用了 multi-dilated convolutional (空洞卷积)，并将空洞卷积用于生成 CAM 的过程然后生成伪标签并和 class score-weighted maps 训练 FCN 网络。</li>
+</ul>
+<p>然而，以上两种方法存在的问题是：最终得到的分割结果只能很好的分出最值得注意的区域。其中一种方法是使用对抗或随机擦除（adversarial or stochastic erasing）的方法，从而使模型可以关注到最值得注意的区域以外的区域：</p>
+<ul>
 <li>AE-PSL (2017): 和 SEC 一样，该方法也是生成 CAM 作为伪标签训练 FCN，不同的是：在训练 CNN 的过程中，高激活分数的区域会被从训练图片中擦除。</li>
-<li>FickleNet (2019): 利用图像级标签训练 CNN，，其在后面的卷积层中具有中心固定的空间维度的 dropout（通过丢弃卷积窗口中非中心的像素实现），然后多次使用 Grad-CAM 生成阈值化的伪标签以训练 FCN。<br>
-另外一种解决方法是简单的将类激活从自信度较高的区域传播到相邻的具有相似视觉特征的区域中，从而使生成的伪标签能覆盖到目标物体更广的区域：</li>
+<li>FickleNet (2019): 利用图像级标签训练 CNN，，其在后面的卷积层中具有中心固定的空间维度的 dropout（通过丢弃卷积窗口中非中心的像素实现），然后多次使用 Grad-CAM 生成阈值化的伪标签以训练 FCN。</li>
+</ul>
+<p>另外一种解决方法是简单的将类激活从自信度较高的区域传播到相邻的具有相似视觉特征的区域中，从而使生成的伪标签能覆盖到目标物体更广的区域：</p>
+<ul>
 <li>DSRG (2018): 训练一个 CNN 并且对生成的 CAM 使用 region-growing 的方法后生成伪标签用于训练 FCN。</li>
 <li>PSA (2018): 训练一个 CNN 并通过 random walk 的算法将 CAM 扩展到周围具有语义相似性的区域，从而生成伪标签用于 FCN 的训练。</li>
-<li>IRNet (2019): 该方法也是类似的思路，只不过该方法通过从 CAM 中获得的低位移场质心实施 random walk 算法来分割类的实例，直到类的边界，从而生成伪标签来训练 FCN。<br>
-值得一提的是：根绝在 PASCAL VOC 上的定量结果显示，前五的弱监督语义分割方法均是采用的 self-supervised learning 方法，并且其中三个还使用了将类激活传播的方法。</li>
+<li>IRNet (2019): 该方法也是类似的思路，只不过该方法通过从 CAM 中获得的低位移场质心实施 random walk 算法来分割类的实例，直到类的边界，从而生成伪标签来训练 FCN。</li>
 </ul>
+<p>值得一提的是：根绝在 PASCAL VOC 上的定量结果显示，前五的弱监督语义分割方法均是采用的 self-supervised learning 方法，并且其中三个还使用了将类激活传播的方法。</p>
 
       <div class="tags">
           <a href="/tags/cv-deep-learning-weakly-supervised-semantic-segmentation/" rel="tag"><i class="ic i-tag"></i> cv; deep learning; weakly-supervised semantic segmentation</a>
@@ -231,7 +235,7 @@ Yume Shoka = Hexo</title>
       <i class="ic i-calendar-check"></i>
     </span>
     <span class="text">Edited on</span>
-    <time title="Modified: 2021-12-25 01:56:56" itemprop="dateModified" datetime="2021-12-25T01:56:56+08:00">2021-12-25</time>
+    <time title="Modified: 2021-12-25 02:02:11" itemprop="dateModified" datetime="2021-12-25T02:02:11+08:00">2021-12-25</time>
   </span>
 </div>
 
@@ -287,7 +291,7 @@ Yume Shoka = Hexo</title>
     <div class="item left">
       
 
-  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva2.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1giciuja1j1j20zk0m8kjl.jpg" title="Hello World">
+  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva1.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1gipevarprfj20zk0m8npd.jpg" title="Hello World">
   <span class="type">Previous Post</span>
   <span class="category"><i class="ic i-flag"></i> </span>
   <h3>Hello World</h3>
@@ -384,7 +388,9 @@ Yume Shoka = Hexo</title>
 <div class="breadcrumb">
 </div>
 
-    <span><a href="/2021/12/21/hello-world/" title="Hello World">Hello World</a></span>
+    <span><a href="/2021/12/24/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB%EF%BC%9AA-Comprehensive-Analysis-of-Weakly-Supervised-Semantic-Segmentation-in-Different-Image-Domains/" title="	论文阅读：A Comprehensive Analysis of Weakly-Supervised Semantic Segmentation in
+	Different Image Domains">	论文阅读：A Comprehensive Analysis of Weakly-Supervised Semantic Segmentation in
+	Different Image Domains</a></span>
   </li>
 
       
@@ -393,9 +399,7 @@ Yume Shoka = Hexo</title>
 <div class="breadcrumb">
 </div>
 
-    <span><a href="/2021/12/24/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB%EF%BC%9AA-Comprehensive-Analysis-of-Weakly-Supervised-Semantic-Segmentation-in-Different-Image-Domains/" title="	论文阅读：A Comprehensive Analysis of Weakly-Supervised Semantic Segmentation in
-	Different Image Domains">	论文阅读：A Comprehensive Analysis of Weakly-Supervised Semantic Segmentation in
-	Different Image Domains</a></span>
+    <span><a href="/2021/12/21/hello-world/" title="Hello World">Hello World</a></span>
   </li>
 
   </ul>
