@@ -104,12 +104,12 @@ Yume Shoka = Hexo</title>
       </div>
       <div id="imgs" class="pjax">
         <ul>
-          <li class="item" data-background-image="https://tva3.sinaimg.cn/large/6833939bly1gipexbei4hj20zk0m8npd.jpg"></li>
-          <li class="item" data-background-image="https://tva3.sinaimg.cn/large/6833939bly1gicitf0kl1j20zk0m87fe.jpg"></li>
-          <li class="item" data-background-image="https://tva3.sinaimg.cn/large/6833939bly1gipeu7txpzj20zk0m81kx.jpg"></li>
-          <li class="item" data-background-image="https://tva3.sinaimg.cn/large/6833939bly1gipesng5oej20zk0m87d4.jpg"></li>
-          <li class="item" data-background-image="https://tva3.sinaimg.cn/large/6833939bly1gicitspjpbj20zk0m81ky.jpg"></li>
-          <li class="item" data-background-image="https://tva3.sinaimg.cn/large/6833939bly1giciub8ja1j20zk0m81ky.jpg"></li>
+          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipeuv80yoj20zk0m8kjl.jpg"></li>
+          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1giciukx8a7j20zk0m8aio.jpg"></li>
+          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gicm0fdw5cj20zk0m8hdt.jpg"></li>
+          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipeubcbajj20zk0m8h1h.jpg"></li>
+          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1giclip4jbpj20zk0m87cv.jpg"></li>
+          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipewr8iypj20zk0m8b29.jpg"></li>
         </ul>
       </div>
     </header>
@@ -229,9 +229,9 @@ Yume Shoka = Hexo</title>
 <li>用图像级标签训练一个分类网络</li>
 <li>从分类网络中提取 CAM</li>
 <li>将 CAM 阈值化并解决区域重叠冲突后作为种子（seeds/cues）</li>
-<li>用生成的种子（seeds）进行 FCN 的自监督训练<br>
-四个阶段的细节如下：</li>
+<li>用生成的种子（seeds）进行 FCN 的自监督训练</li>
 </ol>
+<p>四个阶段的细节如下：</p>
 <ul>
 <li>Classification CNN: 这里会用图像级标签训练两个分类网络：
 <ul>
@@ -243,7 +243,32 @@ Yume Shoka = Hexo</title>
 <li>Seed Generation: 对于 foreground network，其将最大激活值的 20% 作为弱的位置线索（weak localization cue）；对于 background network，添加背景类 CAM，应用 2D 中值滤波器，并将 10% 最低激活像素作为附加背景线索。 在线索重叠的区域，具有较小线索的类别优先。</li>
 <li>Self-Supervised FCN Learning: 训练的 FCN 网络有三个损失函数作为监督信号：（1）生成的 weak localization cues（2）图像级标签（3）将最终生成的 mask 最为输入传入 CRF 来作为最终分割结果的监督。</li>
 </ul>
+<p>值得一提的是，该方法使用 denseCRF 最为最终结果的后处理手段。</p>
 <h2 id="deep-seeded-region-growingdsrg"><a class="markdownIt-Anchor" href="#deep-seeded-region-growingdsrg">#</a> Deep Seeded Region Growing(DSRG)</h2>
+<p>该方法的整体框架如下图所示：<br>
+<img data-src="./DSRG_framework.png" alt=""><br>
+该方法与 SEC 主要有一下不同：</p>
+<ol>
+<li>该方法不使用 background network 生成背景类的 activation map，而是使用一种现成的方法 DRFI 生成。</li>
+<li>提取 CAMs 并以最大激活值的 20% 为阈值进行阈值化然后用卷积特征作为 region growing 的依据生成伪标签。</li>
+<li>训练 FCN 的时候使用两个损失函数：（1）用第 2 步生成的伪标签作为监督信号。（2）将最终生成结果送入 dense CRF 后监督自身以学习更好的边界。</li>
+</ol>
+<p>该方法在推理阶段也使用 dense CRF 作为后处理手段。</p>
+<h2 id="inter-pixel-relation-networkirnet"><a class="markdownIt-Anchor" href="#inter-pixel-relation-networkirnet">#</a> Inter-pixel Relation Network(IRNet)</h2>
+<p>该方法的整体框架图如下所示：<br>
+<img data-src="./IRNet_framework.png" alt=""><br>
+该方法和 SEC 以及 DSRG 一样会使用 CAM 作为伪标签，但是不同的是该方法在 backbone 后设置两个 head 预测辅助信息而非直接预测最终的 mask。</p>
+<ul>
+<li>Classification CNN &amp; CAM: 与 SEC 和 DSRG 类似，该方法训练一个分类网络（ResNet50）并从中提取 CAM。</li>
+<li>Seed Generation: 对于前景类，阈值设置为 0.3 并将其经过 denseCRF 处理后作为前景类的 seed，对于背景类，如果该区域没有前景的种子并且其激活值小于 0.05 则将其认为是背景区域，经过 denseCRF 处理后作为背景类的 seed</li>
+<li>Self-Supervised DF and CBM Learning: 上一步生成的前景和背景 seeds 在这一步中被作为伪标签训练 backbone 后面的两个分支：
+<ul>
+<li>displacement field（DF，位移场），该分支用来预测每个位置对于 seeds 实例中心的位移</li>
+<li>class boundary map（CBM），该分支用来预测一个像素处是类边界的可能性（通过最大化不同类之间的像素处的值和最小化相同类之间的像素的值来获得）</li>
+</ul>
+</li>
+<li>CAM Random Walk Propagation with CBM: 最后通过 random walk 算法将每一个类的预测区域传播到边界，CBM 的逆作为转移概率矩阵。</li>
+</ul>
 
       <div class="tags">
           <a href="/tags/cv-deep-learning-weakly-supervised-semantic-segmentation/" rel="tag"><i class="ic i-tag"></i> cv; deep learning; weakly-supervised semantic segmentation</a>
@@ -258,7 +283,7 @@ Yume Shoka = Hexo</title>
       <i class="ic i-calendar-check"></i>
     </span>
     <span class="text">Edited on</span>
-    <time title="Modified: 2021-12-25 21:29:46" itemprop="dateModified" datetime="2021-12-25T21:29:46+08:00">2021-12-25</time>
+    <time title="Modified: 2021-12-25 22:18:51" itemprop="dateModified" datetime="2021-12-25T22:18:51+08:00">2021-12-25</time>
   </span>
 </div>
 
@@ -314,7 +339,7 @@ Yume Shoka = Hexo</title>
     <div class="item left">
       
 
-  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva3.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1giclip4jbpj20zk0m87cv.jpg" title="Hello World">
+  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva4.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1gipew8gmvyj20zk0m87wh.jpg" title="Hello World">
   <span class="type">Previous Post</span>
   <span class="category"><i class="ic i-flag"></i> </span>
   <h3>Hello World</h3>
@@ -338,7 +363,7 @@ Yume Shoka = Hexo</title>
   <div class="panels">
     <div class="inner">
       <div class="contents panel pjax" data-title="Contents">
-          <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#abstract"><span class="toc-number">1.</span> <span class="toc-text"> Abstract</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#introduction"><span class="toc-number">2.</span> <span class="toc-text"> Introduction</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#related-work"><span class="toc-number">3.</span> <span class="toc-text"> Related Work</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#weakly-supervised-semantic-segmentation"><span class="toc-number">3.1.</span> <span class="toc-text"> Weakly-Supervised Semantic Segmentation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#expection-maximization"><span class="toc-number">3.1.1.</span> <span class="toc-text"> Expection-Maximization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multiple-instance-learning"><span class="toc-number">3.1.2.</span> <span class="toc-text"> Multiple Instance Learning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#object-proposal-class-inference"><span class="toc-number">3.1.3.</span> <span class="toc-text"> Object Proposal Class Inference</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#self-supervised-learning"><span class="toc-number">3.1.4.</span> <span class="toc-text"> Self-supervised Learning</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#method"><span class="toc-number">4.</span> <span class="toc-text"> Method</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#seed-expand-and-constrainsec"><span class="toc-number">4.1.</span> <span class="toc-text"> Seed, Expand and Constrain(SEC)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#deep-seeded-region-growingdsrg"><span class="toc-number">4.2.</span> <span class="toc-text"> Deep Seeded Region Growing(DSRG)</span></a></li></ol></li></ol>
+          <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#abstract"><span class="toc-number">1.</span> <span class="toc-text"> Abstract</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#introduction"><span class="toc-number">2.</span> <span class="toc-text"> Introduction</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#related-work"><span class="toc-number">3.</span> <span class="toc-text"> Related Work</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#weakly-supervised-semantic-segmentation"><span class="toc-number">3.1.</span> <span class="toc-text"> Weakly-Supervised Semantic Segmentation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#expection-maximization"><span class="toc-number">3.1.1.</span> <span class="toc-text"> Expection-Maximization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multiple-instance-learning"><span class="toc-number">3.1.2.</span> <span class="toc-text"> Multiple Instance Learning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#object-proposal-class-inference"><span class="toc-number">3.1.3.</span> <span class="toc-text"> Object Proposal Class Inference</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#self-supervised-learning"><span class="toc-number">3.1.4.</span> <span class="toc-text"> Self-supervised Learning</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#method"><span class="toc-number">4.</span> <span class="toc-text"> Method</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#seed-expand-and-constrainsec"><span class="toc-number">4.1.</span> <span class="toc-text"> Seed, Expand and Constrain(SEC)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#deep-seeded-region-growingdsrg"><span class="toc-number">4.2.</span> <span class="toc-text"> Deep Seeded Region Growing(DSRG)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#inter-pixel-relation-networkirnet"><span class="toc-number">4.3.</span> <span class="toc-text"> Inter-pixel Relation Network(IRNet)</span></a></li></ol></li></ol>
       </div>
       <div class="related panel pjax" data-title="Related">
       </div>
