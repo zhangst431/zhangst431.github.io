@@ -104,12 +104,12 @@ Yume Shoka = Hexo</title>
       </div>
       <div id="imgs" class="pjax">
         <ul>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipeuv80yoj20zk0m8kjl.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1giciukx8a7j20zk0m8aio.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gicm0fdw5cj20zk0m8hdt.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipeubcbajj20zk0m8h1h.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1giclip4jbpj20zk0m87cv.jpg"></li>
-          <li class="item" data-background-image="https://tva4.sinaimg.cn/large/6833939bly1gipewr8iypj20zk0m8b29.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipeuv80yoj20zk0m8kjl.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gicm0fdw5cj20zk0m8hdt.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1giph4wqtg4j20zk0m8x6p.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1giclhnx9glj20zk0m8npd.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1gipeu7txpzj20zk0m81kx.jpg"></li>
+          <li class="item" data-background-image="https://tva1.sinaimg.cn/large/6833939bly1giclga70tsj20zk0m84mr.jpg"></li>
         </ul>
       </div>
     </header>
@@ -269,6 +269,105 @@ Yume Shoka = Hexo</title>
 </li>
 <li>CAM Random Walk Propagation with CBM: 最后通过 random walk 算法将每一个类的预测区域传播到边界，CBM 的逆作为转移概率矩阵。</li>
 </ul>
+<h2 id="histosegnet"><a class="markdownIt-Anchor" href="#histosegnet">#</a> HistoSegNet</h2>
+<p>该方法的整体框架图如下所示：<br>
+<img data-src="./HistoSegNet_framework.png" alt=""></p>
+<p>该方法训练阶段主要包括四个阶段：</p>
+<ol>
+<li>用 patch-level 的标注训练一个分类网络</li>
+<li>一个手工设计的 Grad-CAM</li>
+<li>激活图（activation map）调整，如 background /other 的激活值，class suntraction 等</li>
+<li>denseCRF</li>
+</ol>
+<p>各个阶段的细节如下：</p>
+<ul>
+<li>
+<p>Classification CNN: 用 HTT-label 训练一个分类网络，该网络是 VGG16 的变体：（1）将 softmax 层换为 sigmoid，（2）在每一个卷积层后面都加入 batchnormalization 层。（3）将 flatten 层换为 GMP（Global Max Pooling，全局最大值池化层）</p>
+</li>
+<li>
+<p>Grad-CAM: 生成 Grad-CAM 后将其用 HTT 的 confidence 加权</p>
+</li>
+<li>
+<p>Inter-HTT Adjustments: 该步骤就是对得到的 CAM 做一系列我看不懂的处理使其可以作为下一阶段的伪标签</p>
+</li>
+<li>
+<p>Dense CRF: 对最终生成的预测图使用 Dense CRF 算法</p>
+</li>
+<li>
+<p>Ablative Study<br>
+SEC 和 DSRG 使用 VGG16 来生成它们的定位种子，HistoSegNet 使用一个更浅的 3 个 block 的 VGG16 变体。我们不禁有这样一个疑问：“分类网络的网络结构对弱监督语义分割的性能是否有影响？” 这个问题在以前从来没有被探讨过，今天我们使用 8 种 VGG16 的变体来分析一下不同网络结构对 HisoSegNet 的影响。我们使用的八种结构分别称为 M1，M2，M3，M4，M5，M6，M7 和 X1.7，如下图所示：<br>
+<img data-src="./8_architectures.png" alt=""><br>
+其中 M1 到 M4 分析网络深度对模型性能的影响，他们都使用 GAP 和一个全连接层，但是卷积模块的数量分别是 5，4,3,2 个；M5 到 M7 分析向量操作的影响，他们都有 3 个卷积模块和一个全连接层，他们向量化的操作分别是 GAP，Flatten，GMP；最后，X1.7 分析 HBR 的影响：它和 M7 的结构相同但是在 51 个 ADP 的类上训练但只在 31 个分割类上测试。8 个结构全都在 Keras 上训练 80 个 epoch 使用 cycical learning rate 的学习率调整方法，batch size 为 16，分别测试分类和分割的性能。</p>
+</li>
+</ul>
+<p>分类的性能如下所示：<br>
+<img data-src="./classification_performance.png" alt=""><br>
+可以看出：更深的网络其分类性能更好，GMP 的效果比 GAP 和 Flatten 更好，另外，不使用 HBR 比使用 HBR 的性能更好。</p>
+<p>分割的性能如下：<br>
+<img data-src="./segmentation_performance.png" alt=""><br>
+可以看出：对于形态学类型，使用 GMP 且不使用 HBR 的网络性能仍是最好，但对于网络深度而言，3 个 block 的时候分割的性能更好；对于功能类型，3 个 block 的网络性能仍然很好但是 Flatten 加 HBR 的效果却是最好的。</p>
+<p>以上分析说明：分类网络的设计对后续的分割性能效果影响很大，更深的网络如 VGG16 在分类任务上的性能很好但对于和后续的分割性能却不是最好因为最终的 feature map 的分辨率很低。</p>
+<h1 id="performance-evaluation"><a class="markdownIt-Anchor" href="#performance-evaluation">#</a> Performance Evaluation</h1>
+<h2 id="adp"><a class="markdownIt-Anchor" href="#adp">#</a> ADP</h2>
+<h3 id="quantitative-performance"><a class="markdownIt-Anchor" href="#quantitative-performance">#</a> Quantitative Performance</h3>
+<p><img data-src="./ADP_%E5%AE%9A%E9%87%8F.png" alt=""><br>
+可以看出:</p>
+<ol>
+<li>只有 HistoSegNet 的方法可以稳定的超过 Baseline Grad-CAM 的性能</li>
+<li>对于该任务，X1.7 的网络结构比 VGG16 的要好</li>
+<li>SEC 表现最遭，DSRG 稍微好一点儿，IRNet 的表现与 Baseline Grad-CAM 相当</li>
+</ol>
+<h3 id="qualitative-performance"><a class="markdownIt-Anchor" href="#qualitative-performance">#</a> Qualitative Performance</h3>
+<p><img data-src="./ADP_%E5%AE%9A%E6%80%A7.png" alt=""><br>
+可以看出，对于形态学类型而言，X1.7 的网络结构比 VGG16 的效果更好（我的理解是 X1.7 的 feature map 分辨率更大，可以更好的对应小目标）。尽管 SEC 和 DSRG 可以更好的对应物体轮廓，他们却也会过分夸大物体大小。</p>
+<h2 id="pascal-voc2012"><a class="markdownIt-Anchor" href="#pascal-voc2012">#</a> PASCAL VOC2012</h2>
+<h3 id="quantitative-performance-2"><a class="markdownIt-Anchor" href="#quantitative-performance-2">#</a> Quantitative Performance</h3>
+<p><img data-src="./VOC_%E5%AE%9A%E9%87%8F.png" alt=""><br>
+可以看出：</p>
+<ol>
+<li>只有 SEC 和 DSRG 可以稳定的超过 Baseline</li>
+<li>对于该任务，VGG16 的结构整体上要优于 M7</li>
+<li>使用 M7 的 SEC 效果最好</li>
+</ol>
+<h3 id="qualitative-performance-2"><a class="markdownIt-Anchor" href="#qualitative-performance-2">#</a> Qualitative Performance</h3>
+<p><img data-src="./VOC_%E5%AE%9A%E6%80%A7.png" alt=""><br>
+可以看出：</p>
+<ol>
+<li>VGG16 Grad-CAM 更能捕捉到完整的物体</li>
+<li>SEC 和 DSRG 可以修正原始 Grad-CAM 中的错误（可能是因为 seeding loss 比较适合这个数据集），但是 HistoSegNet 却总是将 Grad-CAM 中的分割结果联系到错误的类别。</li>
+<li>图三中 VGG16 HistoSegNet 将桌子和人混淆了，而 M7 HistoSegNet 只分出了人的头和胳膊。</li>
+<li>所有的方法都很难分出经常共同出现的类别如图 6 中的船和水</li>
+</ol>
+<h2 id="deepglobe-land-cover-classification"><a class="markdownIt-Anchor" href="#deepglobe-land-cover-classification">#</a> DeepGlobe Land Cover Classification</h2>
+<p>懒得整理卫星图像的结果了，把定量和定性结果贴出来供大家参考。<br>
+<img data-src="./DeepGloble_%E5%AE%9A%E9%87%8F.png" alt=""><br>
+<img data-src="./DeepGloble_%E5%AE%9A%E6%80%A7.png" alt=""></p>
+<h1 id="analysis"><a class="markdownIt-Anchor" href="#analysis">#</a> Analysis</h1>
+<h2 id="effect-of-classification-net-cue-sparseness"><a class="markdownIt-Anchor" href="#effect-of-classification-net-cue-sparseness">#</a> Effect of Classification Net Cue Sparseness</h2>
+<p>经分析可知，对于数据集中单张图片的平均目标物体数量较多，则产生稀疏 cue 的分类网络效果较好，因为这种网络的 feature map 分辨率较高需要更少的上采样；而如果数据集中单张图片的平均目标数量较少则相反。</p>
+<h2 id="is-self-supervised-learning-beneficial"><a class="markdownIt-Anchor" href="#is-self-supervised-learning-beneficial">#</a> Is Self-supervised Learning Beneficial?</h2>
+<p>目前主流的弱监督学习方法是先训练分类网络生成弱的定位信息如 CAM 和 Grad-CAM，然后再用这些信息进行自监督学习训练一个 FCN。但是自监督学习是否对于所有图片域的图片都有效？观察结果是：自监督学习是否有帮助与阈值化的 Grad-CAM 与 ground truth 的覆盖程度有关。如下图所示：<br>
+<img data-src="./recall.png" alt=""><br>
+Grad-CAM 对 PASCAL VOC 中羊的覆盖较小，后续使用自监督学习的效果更好，Grad-CAM 对 ADP 中的图片覆盖程度很好，不使用自监督学习的 HistoSegNet 的效果更好。<br>
+用召回率来衡量 Grad-CAM 对 ground truth 的覆盖程度的话，当召回率小于 40% 的时候，使用自监督学习的效果更好，当召回率大于 40% 的时候，使用非自监督学习的效果更好。这很直观，因为 CAM 和 Grad-CAM 因只能分割 VOC2012 中目标物体的一部分而臭名昭著，因此开发了带有损失函数的自监督方法，以通过奖励真阳性而不是惩罚假阳性来鼓励模型从小的种子中预测出完整的区域。虽然对于种子的召回率很低的情况下，这种策略有效，但是当种子覆盖大部分真实情况时，这显然是有害的。另外，通过减小阈值来提高召回率也不能增加自监督学习模型的性能。</p>
+<h2 id="addressing-high-class-co-occurrence"><a class="markdownIt-Anchor" href="#addressing-high-class-co-occurrence">#</a> Addressing High Class Co-occurrence</h2>
+<p>图像级标签的弱监督语义分割是所有弱监督语义分割中标签信息量最少的一种，因为模型需要仅根据某物体是否在图片中来推测出该物体的位置、形状、大小等信息。而类共现性无疑是一个很大的挑战，因为如果训练数据中两个类别总是一起出现，那模型便很难区分出两个物体。作者在论文中通过简单的丢弃图片中所含目标物体类别较多的图片，证明了这种 class balance 的方法可以提高共现性很高的类的性能。但是这样丢弃了大多数训练数据之后还是造成了模型的性能下降，因此需要提出更合理的 class balance 的方法来提高模型的鲁棒性。</p>
+<h1 id="conclusion"><a class="markdownIt-Anchor" href="#conclusion">#</a> Conclusion</h1>
+<p>我们论文的发现清楚地表明，主流方法不适合这些其他图像领域。我们认为需要做更多的工作来开发 WSSS 的替代方法，这些方法要么专门用于这些图像域，要么至少可以推广到它们。** 与其目前专注于提高激活图种子的召回率，不如设计新的损失函数来细化模糊的激活图边界或解决高级共现问题，** 这将是未来组织病理学和卫星图像探索的更好方向。从替代图像域中正确分割图像的最先进算法，作者认为必须做更多的工作来开发能够泛化到不同图像域的新方法。</p>
+<h1 id="我个人的感想"><a class="markdownIt-Anchor" href="#我个人的感想">#</a> 我个人的感想</h1>
+<p>本文详细的比较了在自然图像和组织病理学图像上 SOTA 的几个方法在其他图像域上的表现，作者总结了弱监督语义分割的难点：</p>
+<ol>
+<li>从背景中分割出前景</li>
+<li>类共现问题</li>
+<li>分割出完整的物体</li>
+</ol>
+<p>作者分析了以下几种因素对分割性能的影响：</p>
+<ol>
+<li>分类网络生成 cue 的稀疏性</li>
+<li>是否使用自监督学习</li>
+<li>类共现性的影响</li>
+</ol>
+<p>作者在最后总结的时候还说到：与其目前专注于提高激活图种子的召回率，不如设计新的损失函数来细化模糊的激活图边界或解决高级共现问题。</p>
 
       <div class="tags">
           <a href="/tags/cv-deep-learning-weakly-supervised-semantic-segmentation/" rel="tag"><i class="ic i-tag"></i> cv; deep learning; weakly-supervised semantic segmentation</a>
@@ -283,7 +382,7 @@ Yume Shoka = Hexo</title>
       <i class="ic i-calendar-check"></i>
     </span>
     <span class="text">Edited on</span>
-    <time title="Modified: 2021-12-25 22:18:51" itemprop="dateModified" datetime="2021-12-25T22:18:51+08:00">2021-12-25</time>
+    <time title="Modified: 2021-12-26 23:07:18" itemprop="dateModified" datetime="2021-12-26T23:07:18+08:00">2021-12-26</time>
   </span>
 </div>
 
@@ -339,7 +438,7 @@ Yume Shoka = Hexo</title>
     <div class="item left">
       
 
-  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva4.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1gipew8gmvyj20zk0m87wh.jpg" title="Hello World">
+  <a href="/2021/12/21/hello-world/" itemprop="url" rel="prev" data-background-image="https:&#x2F;&#x2F;tva1.sinaimg.cn&#x2F;mw690&#x2F;6833939bly1giclh0m9pdj20zk0m8hdt.jpg" title="Hello World">
   <span class="type">Previous Post</span>
   <span class="category"><i class="ic i-flag"></i> </span>
   <h3>Hello World</h3>
@@ -363,7 +462,7 @@ Yume Shoka = Hexo</title>
   <div class="panels">
     <div class="inner">
       <div class="contents panel pjax" data-title="Contents">
-          <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#abstract"><span class="toc-number">1.</span> <span class="toc-text"> Abstract</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#introduction"><span class="toc-number">2.</span> <span class="toc-text"> Introduction</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#related-work"><span class="toc-number">3.</span> <span class="toc-text"> Related Work</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#weakly-supervised-semantic-segmentation"><span class="toc-number">3.1.</span> <span class="toc-text"> Weakly-Supervised Semantic Segmentation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#expection-maximization"><span class="toc-number">3.1.1.</span> <span class="toc-text"> Expection-Maximization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multiple-instance-learning"><span class="toc-number">3.1.2.</span> <span class="toc-text"> Multiple Instance Learning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#object-proposal-class-inference"><span class="toc-number">3.1.3.</span> <span class="toc-text"> Object Proposal Class Inference</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#self-supervised-learning"><span class="toc-number">3.1.4.</span> <span class="toc-text"> Self-supervised Learning</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#method"><span class="toc-number">4.</span> <span class="toc-text"> Method</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#seed-expand-and-constrainsec"><span class="toc-number">4.1.</span> <span class="toc-text"> Seed, Expand and Constrain(SEC)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#deep-seeded-region-growingdsrg"><span class="toc-number">4.2.</span> <span class="toc-text"> Deep Seeded Region Growing(DSRG)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#inter-pixel-relation-networkirnet"><span class="toc-number">4.3.</span> <span class="toc-text"> Inter-pixel Relation Network(IRNet)</span></a></li></ol></li></ol>
+          <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#abstract"><span class="toc-number">1.</span> <span class="toc-text"> Abstract</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#introduction"><span class="toc-number">2.</span> <span class="toc-text"> Introduction</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#related-work"><span class="toc-number">3.</span> <span class="toc-text"> Related Work</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#weakly-supervised-semantic-segmentation"><span class="toc-number">3.1.</span> <span class="toc-text"> Weakly-Supervised Semantic Segmentation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#expection-maximization"><span class="toc-number">3.1.1.</span> <span class="toc-text"> Expection-Maximization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multiple-instance-learning"><span class="toc-number">3.1.2.</span> <span class="toc-text"> Multiple Instance Learning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#object-proposal-class-inference"><span class="toc-number">3.1.3.</span> <span class="toc-text"> Object Proposal Class Inference</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#self-supervised-learning"><span class="toc-number">3.1.4.</span> <span class="toc-text"> Self-supervised Learning</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#method"><span class="toc-number">4.</span> <span class="toc-text"> Method</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#seed-expand-and-constrainsec"><span class="toc-number">4.1.</span> <span class="toc-text"> Seed, Expand and Constrain(SEC)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#deep-seeded-region-growingdsrg"><span class="toc-number">4.2.</span> <span class="toc-text"> Deep Seeded Region Growing(DSRG)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#inter-pixel-relation-networkirnet"><span class="toc-number">4.3.</span> <span class="toc-text"> Inter-pixel Relation Network(IRNet)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#histosegnet"><span class="toc-number">4.4.</span> <span class="toc-text"> HistoSegNet</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#performance-evaluation"><span class="toc-number">5.</span> <span class="toc-text"> Performance Evaluation</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#adp"><span class="toc-number">5.1.</span> <span class="toc-text"> ADP</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#quantitative-performance"><span class="toc-number">5.1.1.</span> <span class="toc-text"> Quantitative Performance</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#qualitative-performance"><span class="toc-number">5.1.2.</span> <span class="toc-text"> Qualitative Performance</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#pascal-voc2012"><span class="toc-number">5.2.</span> <span class="toc-text"> PASCAL VOC2012</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#quantitative-performance-2"><span class="toc-number">5.2.1.</span> <span class="toc-text"> Quantitative Performance</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#qualitative-performance-2"><span class="toc-number">5.2.2.</span> <span class="toc-text"> Qualitative Performance</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#deepglobe-land-cover-classification"><span class="toc-number">5.3.</span> <span class="toc-text"> DeepGlobe Land Cover Classification</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#analysis"><span class="toc-number">6.</span> <span class="toc-text"> Analysis</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#effect-of-classification-net-cue-sparseness"><span class="toc-number">6.1.</span> <span class="toc-text"> Effect of Classification Net Cue Sparseness</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#is-self-supervised-learning-beneficial"><span class="toc-number">6.2.</span> <span class="toc-text"> Is Self-supervised Learning Beneficial?</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#addressing-high-class-co-occurrence"><span class="toc-number">6.3.</span> <span class="toc-text"> Addressing High Class Co-occurrence</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#conclusion"><span class="toc-number">7.</span> <span class="toc-text"> Conclusion</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%88%91%E4%B8%AA%E4%BA%BA%E7%9A%84%E6%84%9F%E6%83%B3"><span class="toc-number">8.</span> <span class="toc-text"> 我个人的感想</span></a></li></ol>
       </div>
       <div class="related panel pjax" data-title="Related">
       </div>
@@ -488,7 +587,8 @@ Yume Shoka = Hexo</title>
       empty: "We didn't find any results for the search: ${query}",
       stats: "${hits} results found in ${time} ms"
     },
-    valine: true,fancybox: true,
+    valine: true,copy_tex: true,
+    katex: true,fancybox: true,
     copyright: 'Copied to clipboard successfully! <br> All articles in this blog are licensed under <i class="ic i-creative-commons"></i>BY-NC-SA.',
     ignores : [
       function(uri) {
